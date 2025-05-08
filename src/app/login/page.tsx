@@ -91,15 +91,10 @@ export default function Login() {
     setError(null);
 
     try {
-      console.log("Login attempt with:", { email });
-      console.log("Supabase client:", supabase);
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      console.log("Login response:", { data, error });
 
       if (error) {
         throw error;
