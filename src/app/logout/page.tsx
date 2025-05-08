@@ -4,10 +4,6 @@ import { useEffect } from "react";
 import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-// Dezactivează complet prerendering-ul
-// export const dynamic = "force-dynamic";
-// export const revalidate = 0;
-
 export default function LogoutPage() {
   useEffect(() => {
     const handleLogout = async () => {
