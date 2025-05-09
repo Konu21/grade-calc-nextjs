@@ -13,6 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
 interface GradeData {
   year: string;
   grade: number;
@@ -23,16 +24,14 @@ export default function Dashboard() {
   const { isAuthenticated, profileComplete, loading } = useAuth();
   const [gradesData, setGradesData] = useState<GradeData[]>([]);
 
+  // Authentication redirects
   useEffect(() => {
-    if (!loading) {
-      if (!isAuthenticated) {
-        router.push("/login");
-      } else if (!profileComplete) {
-        router.push("/complete-profile");
-      }
-    }
+    if (!loading && !isAuthenticated) router.push("/login");
+    if (!loading && isAuthenticated && !profileComplete)
+      router.push("/complete-profile");
   }, [loading, isAuthenticated, profileComplete, router]);
 
+  // Fetch grades data
   useEffect(() => {
     const fetchGradesData = async () => {
       try {
@@ -49,11 +48,13 @@ export default function Dashboard() {
     fetchGradesData();
   }, []);
 
+  // Calculate min grade for YAxis
   const minGrade = useMemo(() => {
     if (gradesData.length === 0) return 0;
-    const minValue = Math.min(...gradesData.map((item) => item.grade));
-    return Math.floor(minValue);
+    return Math.floor(Math.min(...gradesData.map((item) => item.grade)));
   }, [gradesData]);
+
+  // Loading state
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -62,41 +63,67 @@ export default function Dashboard() {
     );
   }
 
-  if (!isAuthenticated) {
-    return <p>Please log in...</p>;
-  }
+  // Auth states
+  if (!isAuthenticated) return null; // Redirect handled by useEffect
+  if (!profileComplete) return null; // Redirect handled by useEffect
 
-  if (!profileComplete) {
-    return <p>Redirecting to complete your profile...</p>;
-  }
-  // Your actual dashboard content here
+  // Main dashboard content
   return (
-    <div className="flex flex-col  w-full items-center mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
-      <div className="flex flex-col items-center p-6 w-full rounded-lg shadow">
-        {gradesData.length > 0 && (
-          <div className="flex flex-col items-center mt-8 p-6 border w-full rounded-lg">
-            <h2 className="text-xl font-bold mb-4">Grade Evolution</h2>
-            <div className="w-full h-80">
+    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-center sm:text-left">
+        Grade Dashboard
+      </h1>
+
+      <div className="bg-background rounded-lg shadow p-4 sm:p-6">
+        {gradesData.length > 0 ? (
+          <div className="border rounded-lg p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 text-center">
+              Grade Evolution
+            </h2>
+            <div className="w-full h-[300px] sm:h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={gradesData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                  margin={{
+                    top: 20,
+                    right: 30,
+                    left: 20,
+                    bottom: 10,
+                  }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="year" />
-                  <YAxis domain={[minGrade, 10]} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                  <XAxis
+                    dataKey="year"
+                    tick={{ fontSize: 12 }}
+                    tickMargin={10}
+                  />
+                  <YAxis
+                    domain={[minGrade, 10]}
+                    tick={{ fontSize: 12 }}
+                    tickMargin={10}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      borderRadius: "0.5rem",
+                      boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                    }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="grade"
                     stroke="#8884d8"
-                    activeDot={{ r: 2 }}
-                    name="Grades"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    activeDot={{ r: 6, strokeWidth: 2 }}
+                    name="Grade"
                   />
                 </LineChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No grade data available</p>
           </div>
         )}
       </div>

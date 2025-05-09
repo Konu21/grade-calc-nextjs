@@ -127,26 +127,26 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <Avatar className="fixed top-5 left-5 w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center z-50">
             {userName}
           </Avatar>
-          <div className="flex justify-self-center fixed w-fit px-6 bottom-5 left-0 right-0 rounded-4xl bg-accent/25 border-t transpar md:hidden z-50">
-            <div className="flex gap-10 justify-center py-2">
+          <div className="fixed inset-x-0 bottom-5 z-50 mx-auto w-max rounded-4xl bg-accent/25 border-t px-4 py-2 backdrop-blur-sm md:hidden">
+            <div className="flex gap-2 xs:gap-3 sm:gap-4 justify-center">
               {SIDEBAR_ITEMS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex flex-col items-center  p-2 text-sm"
+                  className="flex flex-col items-center p-2 text-sm transition-colors hover:bg-accent/50 rounded-lg"
                 >
                   {item.icon}
-                  <span className="text-xs mt-1 tracking-[0.1em]">
+                  <span className="text-xs mt-1 tracking-wide">
                     {item.label}
                   </span>
                 </Link>
               ))}
               <button
                 onClick={logout}
-                className="flex flex-col items-center p-2 text-destructive text-sm"
+                className="flex flex-col items-center p-2 text-destructive text-sm transition-colors hover:bg-destructive/10 rounded-lg"
               >
                 <Power className="w-5 h-5" />
-                <span className="text-xs mt-1 tracking-[0.1em]">Logout</span>
+                <span className="text-xs mt-1 tracking-wide">Logout</span>
               </button>
             </div>
           </div>
