@@ -1,6 +1,5 @@
-//app/complete-profile/page.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+// Type definitions for our data structures
 interface AcademicYear {
   id: number;
   year_name: string;
@@ -23,110 +23,97 @@ interface Semester {
   semester_name: string;
 }
 
-interface Rotation {
-  id: number;
-  rotation_name: string;
-}
-
 interface StudyCycle {
   id: number;
   academic_year_id: number;
   semester_id: number;
-  rotation_id: number;
 }
 
 export default function CompleteProfile() {
-  const [year, setYear] = useState<string>("");
-  const [semester, setSemester] = useState<string>("");
-  const [rotation, setRotation] = useState<string>("");
+  // Form state management
+  const [formData, setFormData] = useState({
+    year: "",
+    semester: "",
+    rotation: "",
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Data state for dropdown options
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [semesters, setSemesters] = useState<Semester[]>([]);
-  const [rotations, setRotations] = useState<Rotation[]>([]);
-  const [study_cycles, setStudy_Cycles] = useState<StudyCycle[]>([]);
+  const [, setStudyCycles] = useState<StudyCycle[]>([]);
   const [fetchingData, setFetchingData] = useState(true);
+
   const router = useRouter();
 
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      try {
-        setFetchingData(true);
+  /**
+   * Fetches initial data needed for the form (academic years, semesters, study cycles)
+   * Uses Promise.all to fetch data in parallel for better performance
+   */
+  const fetchInitialData = useCallback(async () => {
+    try {
+      setFetchingData(true);
+      setError(null);
 
-        // Fetch academic years
-        const { data: yearsData, error: yearsError } = await supabase
+      // Fetch all required data in parallel
+      const [
+        { data: yearsData, error: yearsError },
+        { data: semestersData, error: semestersError },
+        { data: studyCycleData, error: studyCycleError },
+      ] = await Promise.all([
+        supabase
           .from("academic_years")
           .select("id, year_name")
-          .order("id", { ascending: true });
-
-        if (yearsError) throw yearsError;
-        setAcademicYears(yearsData || []);
-
-        // Fetch semesters
-        const { data: semestersData, error: semestersError } = await supabase
+          .order("id", { ascending: true }),
+        supabase
           .from("semesters")
           .select("id, semester_name")
-          .order("id", { ascending: true });
-
-        if (semestersError) throw semestersError;
-        setSemesters(semestersData || []);
-
-        // Fetch rotations
-        const { data: rotationsData, error: rotationsError } = await supabase
-          .from("rotations")
-          .select("id, rotation_name")
-          .order("id", { ascending: true });
-
-        if (rotationsError) throw rotationsError;
-        setRotations(rotationsData || []);
-
-        // Fetch study cycles
-        const { data: studyCycleData, error: studyCycleError } = await supabase
+          .order("id", { ascending: true }),
+        supabase
           .from("study_cycles")
-          .select("id, academic_year_id, semester_id, rotation_id")
-          .order("id", { ascending: true });
+          .select("id, academic_year_id, semester_id")
+          .order("id", { ascending: true }),
+      ]);
 
-        if (studyCycleError) throw studyCycleError;
-        setStudy_Cycles(studyCycleData || []);
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : "Failed to load academic data";
-        console.error("Data loading error:", err);
-        setError(message);
-      } finally {
-        setFetchingData(false);
-      }
-    };
+      // Handle any errors from Supabase queries
+      if (yearsError) throw yearsError;
+      if (semestersError) throw semestersError;
+      if (studyCycleError) throw studyCycleError;
 
-    fetchInitialData();
+      // Update state with fetched data
+      setAcademicYears(yearsData || []);
+      setSemesters(semestersData || []);
+      setStudyCycles(studyCycleData || []);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to load academic data"
+      );
+      console.error("Data loading error:", err);
+    } finally {
+      setFetchingData(false);
+    }
   }, []);
 
-  const getAvailableRotations = (selectedYear: string): Rotation[] => {
-    if (!selectedYear || parseInt(selectedYear) <= 3) return [];
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchInitialData();
+  }, [fetchInitialData]);
 
-    // Găsește toate study_cycles pentru anul selectat
-    const cyclesForYear = study_cycles.filter(
-      (cycle) => cycle.academic_year_id === parseInt(selectedYear)
-    );
-
-    // Extrage rotation_ids unice din aceste study_cycles
-    const availableRotationIds = [
-      ...new Set(cyclesForYear.map((cycle) => cycle.rotation_id)),
-    ];
-
-    // Returnează rotațiile care au id-urile găsite
-    return rotations.filter((rotation) =>
-      availableRotationIds.includes(rotation.id)
-    );
-  };
-
+  /**
+   * Handles form submission
+   * 1. Validates user authentication
+   * 2. Finds matching study cycle
+   * 3. Updates user's study configuration in database
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading || fetchingData || !isFormValid) return;
+
     setLoading(true);
     setError(null);
 
     try {
-      // Get authenticated user
       const {
         data: { user },
         error: userError,
@@ -134,50 +121,90 @@ export default function CompleteProfile() {
       if (userError || !user)
         throw userError || new Error("User not authenticated");
 
-      // Find matching study cycle
-      const { data: studyCycles, error: cycleError } = await supabase
+      const yearNum = parseInt(formData.year);
+
+      // For years 4+, we don't need semester matching
+      if (yearNum > 3) {
+        // Find any study cycle for the selected year
+        const { data: matchingCycles, error: cycleError } = await supabase
+          .from("study_cycles")
+          .select("id")
+          .eq("academic_year_id", yearNum)
+          .limit(1);
+
+        if (cycleError || !matchingCycles?.[0]?.id) {
+          throw (
+            cycleError || new Error("No study cycle found for selected year")
+          );
+        }
+
+        const { error: upsertError } = await supabase
+          .from("user_study_config")
+          .upsert(
+            {
+              user_id: user.id,
+              study_cycle_id: matchingCycles[0].id,
+            },
+            {
+              onConflict: "user_id",
+            }
+          );
+
+        if (upsertError) throw upsertError;
+        router.push("/dashboard");
+        return;
+      }
+
+      // Original logic for years 1-3
+      const semesterNum = parseInt(formData.semester);
+      const { data: matchingCycles, error: cycleError } = await supabase
         .from("study_cycles")
         .select("id")
-        .eq("academic_year_id", parseInt(year))
-        .eq(
-          parseInt(year) <= 3 ? "semester_id" : "rotation_id",
-          parseInt(year) <= 3 ? parseInt(semester) : parseInt(rotation)
-        );
+        .eq("academic_year_id", yearNum)
+        .eq("semester_id", semesterNum);
 
-      if (cycleError || !studyCycles?.[0]?.id) {
+      if (cycleError || !matchingCycles?.[0]?.id) {
         throw cycleError || new Error("Invalid academic selection");
       }
 
-      // Try to insert first (this might fail if the record already exists)
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from("user_study_config")
-        .insert({
-          user_id: user.id,
-          study_cycle_id: studyCycles[0].id,
-        });
+        .upsert(
+          {
+            user_id: user.id,
+            study_cycle_id: matchingCycles[0].id,
+          },
+          {
+            onConflict: "user_id",
+          }
+        );
 
-      // If insert fails (likely because record exists), try updating
-      if (insertError) {
-        console.log("Insert failed, attempting update:", insertError);
-        const { error: updateError } = await supabase
-          .from("user_study_config")
-          .update({
-            study_cycle_id: studyCycles[0].id,
-          })
-          .eq("user_id", user.id);
-
-        if (updateError) throw updateError;
-      }
-
+      if (upsertError) throw upsertError;
       router.push("/dashboard");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "An error occurred";
+      setError(err instanceof Error ? err.message : "An error occurred");
       console.error("Profile completion error:", err);
-      setError(message);
     } finally {
       setLoading(false);
     }
   };
+
+  /**
+   * Generic handler for select field changes
+   * Resets dependent fields when year changes
+   */
+  const handleSelectChange =
+    (field: keyof typeof formData) => (value: string) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: value,
+        ...(field === "year" ? { semester: "", rotation: "" } : {}), // Reset semester/rotation when year changes
+      }));
+    };
+
+  // Form validation - requires year and (semester for years 1-3)
+  const isFormValid =
+    formData.year && (parseInt(formData.year) <= 3 ? formData.semester : true);
 
   return (
     <div className="flex items-center justify-center min-h-screen px-4">
@@ -189,27 +216,26 @@ export default function CompleteProfile() {
           </p>
         </div>
 
+        {/* Error display */}
         {error && (
           <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">
             {error}
           </div>
         )}
 
+        {/* Loading state */}
         {fetchingData ? (
           <div className="flex justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Academic Year Select */}
             <div className="space-y-2 flex flex-col items-center">
               <Label htmlFor="year">Academic Year</Label>
               <Select
-                value={year}
-                onValueChange={(value: string) => {
-                  setYear(value);
-                  setSemester("");
-                  setRotation("");
-                }}
+                value={formData.year}
+                onValueChange={handleSelectChange("year")}
                 required
                 disabled={fetchingData}
               >
@@ -217,7 +243,7 @@ export default function CompleteProfile() {
                   <SelectValue placeholder="Select your year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {academicYears.map((year: AcademicYear) => (
+                  {academicYears.map((year) => (
                     <SelectItem key={year.id} value={year.id.toString()}>
                       {year.year_name}
                     </SelectItem>
@@ -226,12 +252,13 @@ export default function CompleteProfile() {
               </Select>
             </div>
 
-            {year && parseInt(year) <= 3 ? (
+            {/* Semester Select (only shown for years 1-3) */}
+            {formData.year && parseInt(formData.year) <= 3 && (
               <div className="space-y-2 flex flex-col items-center">
                 <Label htmlFor="semester">Semester</Label>
                 <Select
-                  value={semester}
-                  onValueChange={setSemester}
+                  value={formData.semester}
+                  onValueChange={handleSelectChange("semester")}
                   required
                   disabled={fetchingData}
                 >
@@ -250,49 +277,13 @@ export default function CompleteProfile() {
                   </SelectContent>
                 </Select>
               </div>
-            ) : year && parseInt(year) > 3 ? (
-              <div className="space-y-2">
-                <Label htmlFor="rotation">Internship</Label>
-                <Select
-                  value={rotation}
-                  onValueChange={setRotation}
-                  required
-                  disabled={
-                    fetchingData || getAvailableRotations(year).length === 0
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        getAvailableRotations(year).length === 0
-                          ? "No rotations available"
-                          : "Select rotation"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableRotations(year).map((rotation) => (
-                      <SelectItem
-                        key={rotation.id}
-                        value={rotation.id.toString()}
-                      >
-                        {rotation.rotation_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+            )}
 
+            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
-              disabled={
-                fetchingData ||
-                loading ||
-                !year ||
-                (parseInt(year) <= 3 ? !semester : !rotation)
-              }
+              disabled={!isFormValid || loading || fetchingData}
             >
               {loading ? "Saving..." : "Continue"}
             </Button>
