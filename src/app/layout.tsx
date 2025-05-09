@@ -4,7 +4,6 @@ import { NavbarWrapper } from "@/components/navbar-wrapper";
 import type { Metadata } from "next";
 import "./globals.css";
 import { Orbitron } from "next/font/google";
-import { useAuth } from "@/hooks/auth/useAuth";
 import { ConditionalThemeToggle } from "@/components/ConditionalThemeToggle";
 
 export const orbitron = Orbitron({
