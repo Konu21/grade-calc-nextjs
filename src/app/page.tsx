@@ -39,7 +39,7 @@ export default function Home() {
   }, [router, loading]);
 
   if (loading) {
-    return <div>Se încarcă...</div>; // Afișează un indicator de încărcare
+    return <div className="flex justify-center">Loading...</div>; // Afișează un indicator de încărcare
   }
 
   if (session) {

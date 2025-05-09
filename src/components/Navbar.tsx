@@ -127,16 +127,18 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <Avatar className="fixed top-5 left-5 w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center z-50">
             {userName}
           </Avatar>
-          <div className="fixed mx-16 bottom-5 left-0 right-0 rounded-4xl bg-accent/25 border-t transpar md:hidden z-50">
-            <div className="flex justify-around py-2">
+          <div className="flex justify-self-center fixed w-fit px-6 bottom-5 left-0 right-0 rounded-4xl bg-accent/25 border-t transpar md:hidden z-50">
+            <div className="flex gap-10 justify-center py-2">
               {SIDEBAR_ITEMS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex flex-col items-center p-2 text-sm"
+                  className="flex flex-col items-center  p-2 text-sm"
                 >
                   {item.icon}
-                  <span className="text-xs mt-1">{item.label}</span>
+                  <span className="text-xs mt-1 tracking-[0.1em]">
+                    {item.label}
+                  </span>
                 </Link>
               ))}
               <button
@@ -144,7 +146,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                 className="flex flex-col items-center p-2 text-destructive text-sm"
               >
                 <Power className="w-5 h-5" />
-                <span className="text-xs mt-1">Logout</span>
+                <span className="text-xs mt-1 tracking-[0.1em]">Logout</span>
               </button>
             </div>
           </div>
@@ -159,7 +161,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           onMouseLeave={() => setIsHovered(false)}
           variant="floating"
           className={cn(
-            "fixed top-[26%] all-unset left-0 flex flex-col h-1/2 text-sidebar-foreground border-sidebar-border",
+            "fixed top-[26%] all-unset left-0 flex flex-col h-[25em] text-sidebar-foreground border-sidebar-border",
             "transition-all duration-200 ",
             isHovered ? "w-56" : "w-24"
           )}
@@ -193,7 +195,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <SidebarFooter className="p-4 border-t border-sidebar-border">
             <Button
               onClick={logout}
-              className="flex items-center bg-transparent rounded-md text-primary hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              className="flex items-center bg-transparent rounded-md text-destructive hover:bg-sidebar-accent "
             >
               <Power className="w-5 h-5" />
               <span
