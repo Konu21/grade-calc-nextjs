@@ -127,7 +127,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <Avatar className="fixed top-5 left-5 w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center z-50">
             {userName}
           </Avatar>
-          <div className="fixed bottom-0 left-0 right-0 bg-background border-t md:hidden z-50">
+          <div className="fixed mx-16 bottom-5 left-0 right-0 rounded-4xl bg-accent/25 border-t transpar md:hidden z-50">
             <div className="flex justify-around py-2">
               {SIDEBAR_ITEMS.map((item) => (
                 <Link
@@ -159,9 +159,9 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           onMouseLeave={() => setIsHovered(false)}
           variant="floating"
           className={cn(
-            "fixed top-[26%] left-0 flex flex-col h-1/2 text-sidebar-foreground border-sidebar-border",
-            "transition-all duration-200",
-            isHovered ? "w-56" : "w-20"
+            "fixed top-[26%] all-unset left-0 flex flex-col h-1/2 text-sidebar-foreground border-sidebar-border",
+            "transition-all duration-200 ",
+            isHovered ? "w-56" : "w-24"
           )}
         >
           <SidebarHeader className="flex items-center justify-center p-4">
@@ -169,7 +169,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               {userName}
             </Avatar>
           </SidebarHeader>
-          <SidebarContent className="flex-grow p-4 justify-center items-center">
+          <SidebarContent className="flex-grow p-4 justify-center items-center overflow-hidden">
             <div className="flex flex-col space-y-2 gap-10 items-center">
               {SIDEBAR_ITEMS.map((item) => (
                 <Link
@@ -180,7 +180,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                   {item.icon}
                   <span
                     className={cn(
-                      "text-sm font-medium transition-all duration-200 ml-2",
+                      "text-sm font-medium transition-[width] duration-200 ml-2",
                       !isHovered && "hidden"
                     )}
                   >
@@ -198,7 +198,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               <Power className="w-5 h-5" />
               <span
                 className={cn(
-                  "text-sm font-medium transition-all duration-200 ml-2",
+                  "text-sm font-medium transition-[width] duration-200 ml-2",
                   !isHovered && "hidden"
                 )}
               >

@@ -201,7 +201,7 @@ export default function CompleteProfile() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col items-center">
               <Label htmlFor="year">Academic Year</Label>
               <Select
                 value={year}
@@ -227,7 +227,7 @@ export default function CompleteProfile() {
             </div>
 
             {year && parseInt(year) <= 3 ? (
-              <div className="space-y-2">
+              <div className="space-y-2 flex flex-col items-center">
                 <Label htmlFor="semester">Semester</Label>
                 <Select
                   value={semester}
