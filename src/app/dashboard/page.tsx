@@ -14,15 +14,6 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-interface DatabaseGrade {
-  year: string;
-  year_I_to_II: number;
-  year_II_to_III: number;
-  year_III_to_IV: number;
-  year_IV_to_V: number;
-  year_V_to_VI: number;
-}
-
 interface GradeData {
   year: string;
   grades: Record<string, number>;

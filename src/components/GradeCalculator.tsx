@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import {
   Select,
@@ -51,13 +50,17 @@ export function GradeCalculator() {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchUserSubjects();
-    // Load saved grades from localStorage if in simulation mode
-    const savedGrades = localStorage.getItem("simulatedGrades");
-    if (savedGrades && isSimulation) {
-      setGrades(JSON.parse(savedGrades));
-    }
-  }, []);
+    const loadInitialData = async () => {
+      await fetchUserSubjects();
+      // Load saved grades from localStorage if in simulation mode
+      const savedGrades = localStorage.getItem("simulatedGrades");
+      if (savedGrades && isSimulation) {
+        setGrades(JSON.parse(savedGrades));
+      }
+    };
+
+    loadInitialData();
+  }, [isSimulation]);
 
   const fetchUserSubjects = async () => {
     try {

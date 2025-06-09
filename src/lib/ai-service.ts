@@ -1,4 +1,3 @@
-import { Subject } from "@/types/subjects";
 interface GradeAnalysis {
   name: string;
   credits: number;
@@ -49,7 +48,7 @@ const generatePrompt = (average: number, subjects: GradeAnalysis[]) => {
 export const getAIAnalysis = async (
   average: number,
   subjects: GradeAnalysis[]
-) => {
+): Promise<string> => {
   console.log("[AI Service] Starting AI analysis...");
   console.log("[AI Service] Input data:", { average, subjects });
 
@@ -115,7 +114,7 @@ export const getAIAnalysis = async (
 
     console.log("[AI Service] Final formatted advice:", formattedAdvice);
     return formattedAdvice;
-  } catch (error: any) {
+  } catch (error) {
     console.error("[AI Service] Error in AI analysis:", error);
     return FALLBACK_MESSAGE;
   }
