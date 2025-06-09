@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Orbitron } from "next/font/google";
 import { ConditionalThemeToggle } from "@/components/ConditionalThemeToggle";
+import { Toaster } from "@/components/ui/toaster";
 
 export const orbitron = Orbitron({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
             <div className="fixed bottom-4 right-4 md:block hidden">
               <ThemeToggle />
             </div>
+            <Toaster />
           </AuthProvider>
         </Providers>
       </body>
