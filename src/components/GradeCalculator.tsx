@@ -218,12 +218,22 @@ export function GradeCalculator() {
     let completedCredits = 0;
     let totalPossibleCredits = 0;
 
+    // For automatic calculation (includes all grades regardless of completion)
+    let autoWeightedSum = 0;
+    let autoTotalCredits = 0;
+
     subjects.forEach((subject) => {
       totalPossibleCredits += subject.credits;
       const gradeData = grades[subject.id];
 
+      // Automatic calculation for all entered grades
+      if (gradeData?.grade !== undefined && gradeData.grade > 0) {
+        autoWeightedSum += gradeData.grade * subject.credits;
+        autoTotalCredits += subject.credits;
+      }
+
+      // Original calculation for completed subjects (used by analyze)
       if (gradeData?.grade !== undefined && gradeData.completed) {
-        // Only count completed subjects
         completedCredits += subject.credits;
         weightedSum += gradeData.grade * subject.credits;
         totalCredits += subject.credits;
@@ -232,6 +242,8 @@ export function GradeCalculator() {
 
     return {
       currentAverage: totalCredits === 0 ? 0 : weightedSum / totalCredits,
+      autoAverage:
+        autoTotalCredits === 0 ? 0 : autoWeightedSum / autoTotalCredits,
       projectedAverage: totalCredits === 0 ? 0 : weightedSum / TOTAL_CREDITS,
       completedCredits,
       totalPossibleCredits,
@@ -252,11 +264,11 @@ export function GradeCalculator() {
         credits: subject.credits,
         difficulty: subject.difficulty || "medium",
         grade: grades[subject.id]?.grade || 0,
-        completed: grades[subject.id]?.completed || false,
+        completed: true, // Force all subjects with grades to be considered
       }));
 
       const advice = await getAIAnalysis(
-        averageStats.currentAverage,
+        averageStats.autoAverage, // Use autoAverage instead of currentAverage
         subjectsAnalysis
       );
 
@@ -335,13 +347,21 @@ export function GradeCalculator() {
       <div className="grid gap-4 md:gap-6 md:grid-cols-2 mb-8">
         <Card className="p-4 md:p-6">
           <h2 className="text-2xl font-bold mb-4">Current Progress</h2>
-          <div className="space-y-2">
+          <div className="space-y-4">
             <div>
               <span className="text-4xl font-bold text-primary">
+                {averageStats.autoAverage.toFixed(2)}
+              </span>
+              <span className="text-sm text-gray-500 ml-2">
+                Current Average (All Grades)
+              </span>
+            </div>
+            <div>
+              <span className="text-3xl font-bold text-secondary">
                 {averageStats.currentAverage.toFixed(2)}
               </span>
               <span className="text-sm text-gray-500 ml-2">
-                Current Average
+                Completed Subjects Average
               </span>
             </div>
             <div className="text-sm text-gray-600">
@@ -418,7 +438,7 @@ export function GradeCalculator() {
             variant="secondary"
             onClick={getAIAdvice}
             className="flex-1 md:flex-none"
-            disabled={aiAnalysis.loading || averageStats.currentAverage === 0}
+            disabled={aiAnalysis.loading || averageStats.autoAverage === 0}
           >
             {aiAnalysis.loading ? (
               <>
