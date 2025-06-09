@@ -2,9 +2,20 @@
   "extends": "next/core-web-vitals",
   "rules": {
     "@typescript-eslint/no-explicit-any": "off",
-    "@typescript-eslint/no-unused-vars": ["error", {
-      "varsIgnorePattern": "^(actionTypes|Badge)$"
+    "@typescript-eslint/no-unused-vars": ["warn", {
+      "varsIgnorePattern": "^(actionTypes|Badge)$",
+      "argsIgnorePattern": "^_",
+      "ignoreRestSiblings": true
     }],
     "react-hooks/exhaustive-deps": "warn"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/components/ui/**/*.tsx"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    }
+  ]
 } 

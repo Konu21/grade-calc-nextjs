@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,20 +49,7 @@ export function GradeCalculator() {
   });
   const { toast } = useToast();
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      await fetchUserSubjects();
-      // Load saved grades from localStorage if in simulation mode
-      const savedGrades = localStorage.getItem("simulatedGrades");
-      if (savedGrades && isSimulation) {
-        setGrades(JSON.parse(savedGrades));
-      }
-    };
-
-    loadInitialData();
-  }, [isSimulation]);
-
-  const fetchUserSubjects = async () => {
+  const fetchUserSubjects = useCallback(async () => {
     try {
       const {
         data: { user },
@@ -93,7 +80,20 @@ export function GradeCalculator() {
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      await fetchUserSubjects();
+      // Load saved grades from localStorage if in simulation mode
+      const savedGrades = localStorage.getItem("simulatedGrades");
+      if (savedGrades && isSimulation) {
+        setGrades(JSON.parse(savedGrades));
+      }
+    };
+
+    loadInitialData();
+  }, [isSimulation, fetchUserSubjects]);
 
   const handleGradeChange = (subjectId: string, value: string) => {
     // Allow empty value for deletion
