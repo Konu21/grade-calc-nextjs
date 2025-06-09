@@ -9,8 +9,6 @@ interface GradeAnalysis {
 const FALLBACK_MESSAGE =
   "AI analysis is temporarily unavailable. Please try again later.";
 
-const SELECTED_MODEL = "HuggingFaceH4/zephyr-7b-beta";
-
 const generatePrompt = (average: number, subjects: GradeAnalysis[]) => {
   const pendingSubjects = subjects.filter((s) => !s.completed);
   const completedSubjects = subjects.filter((s) => s.completed);
@@ -35,87 +33,62 @@ const generatePrompt = (average: number, subjects: GradeAnalysis[]) => {
   📚 All Subjects:
   ${allSubjectsText}
   
-  🧠 Provide recommendations ONLY for * IN PROGRESS * subjects
-  
-  Prioritize incomplete subjects based on:
-  1. Lower grades
-  2. Fewer credit points
-  3. Higher difficulty
-  
-  Limit to maximum 5 recommendations.`;
+  🧠 Provide recommendations ONLY for *IN PROGRESS* subjects.
+  Prioritize by: 1) Lower grades, 2) Fewer credits, 3) Higher difficulty.
+  Give maximum 5 concise recommendations.`;
 };
 
 export const getAIAnalysis = async (
   average: number,
   subjects: GradeAnalysis[]
 ): Promise<string> => {
-  console.log("[AI Service] Starting AI analysis...");
-  console.log("[AI Service] Input data:", { average, subjects });
+  console.log("[AI Service] Starting Groq AI analysis...");
 
-  if (!process.env.NEXT_PUBLIC_HF_TOKEN) {
-    console.error("[AI Service] Error: Hugging Face token not configured");
+  if (!process.env.NEXT_PUBLIC_GROQ_API_KEY) {
+    console.error("Groq API key not configured");
     return FALLBACK_MESSAGE;
   }
 
   const prompt = generatePrompt(average, subjects);
-  console.log("[AI Service] Generated prompt:", prompt);
-  console.log("[AI Service] Using model:", SELECTED_MODEL);
+  console.log("Generated prompt:", prompt);
 
   try {
     const response = await fetch(
-      `https://api-inference.huggingface.co/models/${SELECTED_MODEL}`,
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_HF_TOKEN}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 250,
-            temperature: 0.7,
-            top_p: 0.9,
-            do_sample: true,
-            return_full_text: false,
-          },
+          model: "llama3-70b-8192", // Sau "mixtral-8x7b-32768" pentru Mixtral
+          messages: [
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 250,
+          top_p: 0.9,
         }),
       }
     );
 
-    console.log("[AI Service] API Response status:", response.status);
-
     if (!response.ok) {
-      console.error("[AI Service] API Error response:", await response.text());
+      console.error("Groq API error:", await response.text());
       return FALLBACK_MESSAGE;
     }
 
-    const result = await response.json();
-    console.log("[AI Service] Raw API response:", result);
+    const data = await response.json();
+    const advice =
+      data.choices[0]?.message?.content?.trim() || FALLBACK_MESSAGE;
 
-    let advice = "";
-
-    if (Array.isArray(result) && result.length > 0) {
-      advice = result[0]?.generated_text || "";
-    } else if (typeof result === "object") {
-      advice = result.generated_text || "";
-    }
-
-    if (!advice) {
-      console.log("[AI Service] No valid response from model");
-      return FALLBACK_MESSAGE;
-    }
-
-    const formattedAdvice = advice
-      .trim()
-      .split("\n")
-      .filter(Boolean)
-      .join("\n");
-
-    console.log("[AI Service] Final formatted advice:", formattedAdvice);
-    return formattedAdvice;
+    console.log("AI Advice:", advice);
+    return advice;
   } catch (error) {
-    console.error("[AI Service] Error in AI analysis:", error);
+    console.error("Groq request failed:", error);
     return FALLBACK_MESSAGE;
   }
 };
