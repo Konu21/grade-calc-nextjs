@@ -32,6 +32,16 @@ interface AIAnalysis {
   loading: boolean;
 }
 
+interface ScholarshipGrades {
+  year_IV_to_V: number | null;
+  year_V_to_VI: number | null;
+}
+
+interface BudgetGrades {
+  year_IV_to_V: number | null;
+  year_V_to_VI: number | null;
+}
+
 const TOTAL_CREDITS = 60;
 const DIFFICULTY_COLORS = {
   easy: "bg-green-100 text-green-800",
@@ -47,6 +57,16 @@ export function GradeCalculator() {
     advice: "",
     loading: false,
   });
+  const [targetAverage, setTargetAverage] = useState<number | "">("");
+  const [scholarshipGrades, setScholarshipGrades] =
+    useState<ScholarshipGrades | null>(null);
+  const [budgetGrades, setBudgetGrades] = useState<BudgetGrades | null>(null);
+  const [academicYearId, setAcademicYearId] = useState<number | null>(null);
+  const [selectedGradeType, setSelectedGradeType] = useState<
+    "custom" | "budget" | "scholarship"
+  >("custom");
+  const [selectedYear, setSelectedYear] = useState<string>("current");
+  const [years, setYears] = useState<string[]>([]);
   const { toast } = useToast();
 
   const fetchUserSubjects = useCallback(async () => {
@@ -63,6 +83,39 @@ export function GradeCalculator() {
         .single();
 
       if (!userConfig) return;
+
+      // Fetch study cycle to get academic year
+      const { data: studyCycle } = await supabase
+        .from("study_cycles")
+        .select("academic_year_id")
+        .eq("id", userConfig.study_cycle_id)
+        .single();
+
+      if (studyCycle) {
+        setAcademicYearId(studyCycle.academic_year_id);
+
+        // If year is 4, 5, or 6, fetch scholarship and budget grades
+        if ([4, 5, 6].includes(studyCycle.academic_year_id)) {
+          const { data: scholarshipData } = await supabase
+            .from("last_years_scholarship_grades")
+            .select("year_III_to_IV, year_IV_to_V, year_V_to_VI")
+            .order("year", { ascending: false })
+            .limit(1);
+
+          const { data: budgetData } = await supabase
+            .from("last_years_budget_grades")
+            .select("year_III_to_IV, year_IV_to_V, year_V_to_VI")
+            .order("year", { ascending: false })
+            .limit(1);
+
+          if (scholarshipData?.[0]) {
+            setScholarshipGrades(scholarshipData[0]);
+          }
+          if (budgetData?.[0]) {
+            setBudgetGrades(budgetData[0]);
+          }
+        }
+      }
 
       const { data: subjectsData } = await supabase
         .from("subjects")
@@ -82,6 +135,33 @@ export function GradeCalculator() {
     }
   }, [toast]);
 
+  const fetchYears = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from(
+          selectedGradeType === "budget"
+            ? "last_years_budget_grades"
+            : "last_years_scholarship_grades"
+        )
+        .select("*")
+        .order("year", { ascending: false });
+
+      if (error) throw error;
+      if (data) {
+        setYears(data.map((item) => item.year));
+        // Set the most recent year as default
+        if (data.length > 0) {
+          setSelectedYear(data[0].year);
+          const gradeColumn =
+            academicYearId === 4 ? "year_IV_to_V" : "year_V_to_VI";
+          setTargetAverage(data[0][gradeColumn] || "");
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching years:", error);
+    }
+  }, [selectedGradeType, academicYearId]);
+
   useEffect(() => {
     const loadInitialData = async () => {
       await fetchUserSubjects();
@@ -94,6 +174,12 @@ export function GradeCalculator() {
 
     loadInitialData();
   }, [isSimulation, fetchUserSubjects]);
+
+  useEffect(() => {
+    if (selectedGradeType !== "custom") {
+      fetchYears();
+    }
+  }, [selectedGradeType, fetchYears]);
 
   const handleGradeChange = (subjectId: string, value: string) => {
     // Allow empty value for deletion
@@ -233,11 +319,12 @@ export function GradeCalculator() {
       }
 
       // Original calculation for completed subjects (used by analyze)
-      if (gradeData?.grade !== undefined && gradeData.completed) {
+      // Include all subjects in calculation, using 0 for uncompleted ones
+      if (gradeData?.completed) {
         completedCredits += subject.credits;
         weightedSum += gradeData.grade * subject.credits;
-        totalCredits += subject.credits;
       }
+      totalCredits += subject.credits;
     });
 
     return {
@@ -254,7 +341,15 @@ export function GradeCalculator() {
   const averageStats = calculateAverage();
 
   const getAIAdvice = async () => {
-    if (!process.env.NEXT_PUBLIC_HF_TOKEN) return;
+    if (!process.env.NEXT_PUBLIC_GROQ_API_KEY) {
+      toast({
+        title: "Configuration Error",
+        description:
+          "AI analysis is not configured. Please check your environment variables.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setAIAnalysis((prev) => ({ ...prev, loading: true }));
 
@@ -268,8 +363,9 @@ export function GradeCalculator() {
       }));
 
       const advice = await getAIAnalysis(
-        averageStats.autoAverage, // Use autoAverage instead of currentAverage
-        subjectsAnalysis
+        averageStats.autoAverage,
+        subjectsAnalysis,
+        targetAverage || null // Pass target average to AI
       );
 
       setAIAnalysis({
@@ -340,11 +436,47 @@ export function GradeCalculator() {
     }
   };
 
+  const handleTargetAverageChange = (value: string) => {
+    const numValue = parseFloat(value);
+    if (value === "" || (numValue >= 0 && numValue <= 10)) {
+      setTargetAverage(value === "" ? "" : numValue);
+    }
+  };
+
+  const getGradeForYear = async (
+    type: "budget" | "scholarship",
+    year: string
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from(
+          type === "budget"
+            ? "last_years_budget_grades"
+            : "last_years_scholarship_grades"
+        )
+        .select("*")
+        .eq("year", year)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const gradeColumn =
+          academicYearId === 4 ? "year_IV_to_V" : "year_V_to_VI";
+        return data[gradeColumn];
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching grade:", error);
+      return null;
+    }
+  };
+
   return (
     <div className="container mx-auto px-2 sm:px-4 py-8">
       {/* Header Section */}
       <h1 className="text-3xl font-bold text-center mb-8">Grade Calculator</h1>
       <div className="grid gap-4 md:gap-6 md:grid-cols-2 mb-8">
+        {/* Progress Card */}
         <Card className="p-4 md:p-6">
           <h2 className="text-2xl font-bold mb-4">Current Progress</h2>
           <div className="space-y-4">
@@ -374,49 +506,178 @@ export function GradeCalculator() {
           </div>
         </Card>
 
-        <Card className="p-4 md:p-6">
-          <h2 className="text-2xl font-bold mb-4">AI Analysis</h2>
-          {aiAnalysis.loading ? (
-            <div className="flex items-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Analyzing your performance...</span>
-            </div>
-          ) : (
-            <div className="prose prose-sm max-w-none">
-              {aiAnalysis.advice ? (
-                aiAnalysis.advice.split("\n").map((line, index) => {
-                  if (line.startsWith("Priority")) {
-                    const [priority, rest] = line.split(":");
-                    return (
-                      <div key={index} className="mb-4">
-                        <h3 className="text-lg font-semibold text-primary">
-                          {priority}:
-                        </h3>
-                        <p className="text-primary mt-1">{rest}</p>
-                      </div>
-                    );
-                  }
-                  return (
-                    line.trim() && (
-                      <p key={index} className="text-primary">
-                        {line}
-                      </p>
-                    )
-                  );
-                })
+        {/* Target Grades Card */}
+        <Card className="flex flex-col p-4 md:p-6 w-full">
+          <h2 className="text-2xl font-bold mb-4">Target Grades</h2>
+          <div className="space-y-6">
+            <div>
+              {selectedGradeType === "custom" ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0"
+                    max="10"
+                    step="0.1"
+                    className="w-32 text-right text-4xl font-bold"
+                    value={targetAverage}
+                    onChange={(e) => handleTargetAverageChange(e.target.value)}
+                    placeholder="0.00"
+                  />
+                  <span className="text-sm text-gray-500">Custom Grade</span>
+                </div>
               ) : (
-                <p className="text-sm text-primary">
-                  Complete some subjects to get AI analysis
-                </p>
+                <div>
+                  <span className="text-4xl font-bold text-primary">
+                    {targetAverage ? Number(targetAverage).toFixed(2) : "N/A"}
+                  </span>
+                  <span className="text-sm text-gray-500 ml-2">
+                    {selectedGradeType === "budget"
+                      ? "Budget Grade"
+                      : "Scholarship Grade"}
+                  </span>
+                </div>
               )}
             </div>
-          )}
+
+            <div>
+              <div className="flex flex-col gap-6">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Target Average:</span>
+                  {academicYearId && [4, 5].includes(academicYearId) ? (
+                    <Select
+                      value={selectedGradeType}
+                      onValueChange={(
+                        value: "custom" | "budget" | "scholarship"
+                      ) => {
+                        setSelectedGradeType(value);
+                        if (value === "custom") {
+                          setTargetAverage("");
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="custom">Custom</SelectItem>
+                        <SelectItem value="budget">Budget Grade</SelectItem>
+                        <SelectItem value="scholarship">
+                          Scholarship Grade
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : null}
+                </div>
+
+                {selectedGradeType !== "custom" &&
+                  academicYearId &&
+                  [4, 5].includes(academicYearId) && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Select Year:</span>
+                      <Select
+                        value={selectedYear}
+                        onValueChange={async (value: string) => {
+                          setSelectedYear(value);
+                          const grade = await getGradeForYear(
+                            selectedGradeType,
+                            value
+                          );
+                          setTargetAverage(grade || "");
+                        }}
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {years.map((year) => (
+                            <SelectItem key={year} value={year}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+              </div>
+            </div>
+          </div>
         </Card>
       </div>
 
+      {/* AI Analysis Card */}
+      <Card className="p-4 md:p-6 mb-8">
+        <h2 className="text-2xl font-bold mb-4">AI Analysis</h2>
+        {aiAnalysis.loading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Analyzing your performance...</span>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {aiAnalysis.advice ? (
+              <>
+                {aiAnalysis.advice.split("\n").map((line, index) => {
+                  if (line.trim() === "") return null;
+
+                  // Handle the target average line
+                  if (line.startsWith("Based on your academic")) {
+                    return (
+                      <p
+                        key={index}
+                        className="text-lg text-primary font-medium"
+                      >
+                        {line}
+                      </p>
+                    );
+                  }
+
+                  // Handle the explanation line
+                  if (line.startsWith("Since there")) {
+                    return (
+                      <p
+                        key={index}
+                        className="text-sm text-muted-foreground mb-4"
+                      >
+                        {line}
+                      </p>
+                    );
+                  }
+
+                  // Handle numbered recommendations
+                  if (line.match(/^\d+\./)) {
+                    const [number, ...rest] = line.split("**");
+                    const content = rest.join("").replace(/\*\*/g, "");
+                    return (
+                      <div
+                        key={index}
+                        className="flex gap-4 p-3 rounded-lg bg-secondary/5"
+                      >
+                        <span className="text-primary font-bold">{number}</span>
+                        <p className="text-primary">{content}</p>
+                      </div>
+                    );
+                  }
+
+                  // Handle other lines
+                  return (
+                    <p key={index} className="text-primary">
+                      {line}
+                    </p>
+                  );
+                })}
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Complete some subjects to get AI analysis
+              </p>
+            )}
+          </div>
+        )}
+      </Card>
+
       {/* Mode Selection */}
       <div className="flex flex-wrap justify-between gap-3 mb-6">
-        <div>
+        <div className="flex flex-wrap gap-6">
           <Button
             variant={isSimulation ? "default" : "outline"}
             onClick={() => setIsSimulation(true)}
@@ -453,14 +714,16 @@ export function GradeCalculator() {
       </div>
 
       {/* Subjects Grid */}
-      <div className="grid gap-4 pb-10 md:grid-cols-2 mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {subjects.map((subject) => (
           <Card
             key={subject.id}
-            className={cn("p-4 ", {
-              "border-green-500 border-2": grades[subject.id]?.grade >= 5,
-              "border-red-500 border-2":
+            className={cn("p-4 border-2", {
+              "border-green-500/80 shadow-[0_0_0_2px_rgba(34,197,94,0.3)]":
+                grades[subject.id]?.grade >= 5,
+              "border-red-500/80 shadow-[0_0_0_2px_rgba(239,68,68,0.3)]":
                 grades[subject.id]?.grade > 0 && grades[subject.id]?.grade < 5,
+              "border-input": !grades[subject.id]?.grade,
             })}
           >
             <div className="flex flex-col gap-3">

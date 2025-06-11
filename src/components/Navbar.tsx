@@ -70,7 +70,10 @@ export function Navbar({ variant = "default" }: NavbarProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [userName, setUserName] = useState("");
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === "/" && pathname === "/dashboard") return true;
+    return pathname === path;
+  };
 
   useEffect(() => {
     const fetchSessionAndProfile = async () => {
@@ -133,7 +136,12 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex flex-col items-center p-2 text-sm transition-colors hover:bg-accent/50 rounded-lg"
+                  className={cn(
+                    "flex flex-col items-center p-2 text-sm transition-colors rounded-lg",
+                    isActive(item.href)
+                      ? "bg-accent text-primary font-medium rounded-3xl"
+                      : "hover:bg-accent/50"
+                  )}
                 >
                   {item.icon}
                   <span className="text-xs mt-1 tracking-wide">
@@ -161,23 +169,28 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           onMouseLeave={() => setIsHovered(false)}
           variant="floating"
           className={cn(
-            "fixed top-[26%] all-unset left-0 flex flex-col h-[25em] text-sidebar-foreground border-sidebar-border",
+            "fixed top-[26%] all-unset left-0 flex flex-col h-[25em] text-sidebar-foreground border-sidebar-border ",
             "transition-all duration-200 ",
             isHovered ? "w-56" : "w-24"
           )}
         >
-          <SidebarHeader className="flex items-center justify-center p-4">
+          <SidebarHeader className="flex items-center justify-center p-4 bg-accent/25 backdrop-blur-sm rounded-t-4xl">
             <Avatar className="w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center">
               {userName}
             </Avatar>
           </SidebarHeader>
-          <SidebarContent className="flex-grow p-4 justify-center items-center overflow-hidden">
-            <div className="flex flex-col space-y-2 gap-10 items-center">
+          <SidebarContent className="flex-grow p-4 justify-center items-center overflow-hidden bg-accent/25 backdrop-blur-sm">
+            <div className="flex flex-col space-y-2 gap-3 items-center">
               {SIDEBAR_ITEMS.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center p-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  className={cn(
+                    "flex items-center p-4 rounded-md transition-colors",
+                    isActive(item.href)
+                      ? "bg-sidebar-accent/30 rounded-4xl text-primary font-medium"
+                      : "hover:bg-sidebar-accent/30 hover:rounded-4xl hover:text-sidebar-accent-foreground"
+                  )}
                 >
                   {item.icon}
                   <span
@@ -192,10 +205,10 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               ))}
             </div>
           </SidebarContent>
-          <SidebarFooter className="p-4 border-t border-sidebar-border">
+          <SidebarFooter className="p-4 border-t border-sidebar-border bg-accent/25 backdrop-blur-sm rounded-b-4xl">
             <Button
               onClick={logout}
-              className="flex items-center bg-transparent rounded-md text-destructive hover:bg-sidebar-accent "
+              className="flex items-center bg-transparent rounded-md text-destructive hover:bg-sidebar-accent/30 hover:rounded-4xl "
             >
               <Power className="w-5 h-5" />
               <span

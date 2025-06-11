@@ -71,7 +71,7 @@
   --chart-2: oklch(0.65 0.1 170);    /* Verde petrol */
   --chart-3: oklch(0.45 0.08 220);    /* Albastru marin */
   --chart-4: oklch(0.8 0.15 80);      /* Galben */
-  --chart-5: oklch(0.75 0.2 50);      /* Portocaliu */      --sidebar: hsl(0 0% 98%);      --sidebar-foreground: hsl(240 5.3% 26.1%);      --sidebar-primary: hsl(240 5.9% 10%);      --sidebar-primary-foreground: hsl(0 0% 98%);      --sidebar-accent: hsl(240 4.8% 95.9%);      --sidebar-accent-foreground: hsl(240 5.9% 10%);      --sidebar-border: hsl(220 13% 91%);      --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --chart-5: oklch(0.75 0.2 50);      /* Portocaliu */      --sidebar: hsla(0, 0%, 0%, 0);      --sidebar-foreground: hsl(240 5.3% 26.1%);      --sidebar-primary: hsl(240 5.9% 10%);      --sidebar-primary-foreground: hsl(0 0% 98%);      --sidebar-accent: hsl(240 4.8% 95.9%);      --sidebar-accent-foreground: hsl(240 5.9% 10%);      --sidebar-border: hsl(220 13% 91%);      --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
 .dark {
@@ -101,7 +101,7 @@
   --chart-2: oklch(0.65 0.15 170);   /* Turcoaz */
   --chart-3: oklch(0.7 0.2 50);      /* Portocaliu */
   --chart-4: oklch(0.7 0.2 300);     /* Violet */
-  --chart-5: oklch(0.7 0.2 10);      /* Roz */      --sidebar: hsl(240 5.9% 10%);      --sidebar-foreground: hsl(240 4.8% 95.9%);      --sidebar-primary: hsl(224.3 76.3% 48%);      --sidebar-primary-foreground: hsl(0 0% 100%);      --sidebar-accent: hsl(240 3.7% 15.9%);      --sidebar-accent-foreground: hsl(240 4.8% 95.9%);      --sidebar-border: hsl(240 3.7% 15.9%);      --sidebar-ring: hsl(217.2 91.2% 59.8%);
+  --chart-5: oklch(0.7 0.2 10);      /* Roz */      --sidebar: hsla(0, 0%, 0%, 0);      --sidebar-foreground: hsl(240 4.8% 95.9%);      --sidebar-primary: hsl(224.3 76.3% 48%);      --sidebar-primary-foreground: hsl(0 0% 100%);      --sidebar-accent: hsl(240 3.7% 15.9%);      --sidebar-accent-foreground: hsl(240 4.8% 95.9%);      --sidebar-border: hsl(240 3.7% 15.9%);      --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
 @layer base {

@@ -5,7 +5,7 @@ import { Sun, Moon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export function ThemeToggle() {
-  const {  setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export function ThemeToggle() {
   return (
     <button
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-      className="p-2 rounded-full border"
+      className="p-2 rounded-full border bg-accent/25 backdrop-blur-sm"
     >
       {resolvedTheme === "dark" ? <Sun /> : <Moon />}
     </button>

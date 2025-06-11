@@ -9,7 +9,11 @@ interface GradeAnalysis {
 const FALLBACK_MESSAGE =
   "AI analysis is temporarily unavailable. Please try again later.";
 
-const generatePrompt = (average: number, subjects: GradeAnalysis[]) => {
+const generatePrompt = (
+  average: number,
+  subjects: GradeAnalysis[],
+  targetAverage: number | null
+) => {
   const pendingSubjects = subjects.filter((s) => !s.completed);
   const completedSubjects = subjects.filter((s) => s.completed);
 
@@ -23,10 +27,14 @@ const generatePrompt = (average: number, subjects: GradeAnalysis[]) => {
     ...pendingSubjects.map((s) => formatSubject(s, "IN PROGRESS")),
   ].join("\n");
 
+  const targetAverageText = targetAverage
+    ? `\n  - Target Average: ${targetAverage.toFixed(2)}`
+    : "";
+
   return `Analyze academic performance and provide specific advice in English:
   
   Academic Status:
-  - Overall Average: ${average.toFixed(2)}
+  - Overall Average: ${average.toFixed(2)}${targetAverageText}
   - Remaining Subjects (incomplete): ${pendingSubjects.length}
   - Completed Subjects: ${completedSubjects.length}
   
@@ -34,22 +42,29 @@ const generatePrompt = (average: number, subjects: GradeAnalysis[]) => {
   ${allSubjectsText}
   
   🧠 Provide recommendations ONLY for *IN PROGRESS* subjects.
-  Prioritize by: 1) Lower grades, 2) Fewer credits, 3) Higher difficulty.
+  ${
+    targetAverage
+      ? `Focus on achieving the target average of ${targetAverage.toFixed(
+          2
+        )}.\n`
+      : ""
+  }Prioritize by: 1) Lower grades, 2) Fewer credits, 3) Higher difficulty.
   Give maximum 5 concise recommendations.`;
 };
 
 export const getAIAnalysis = async (
   average: number,
-  subjects: GradeAnalysis[]
+  subjects: GradeAnalysis[],
+  targetAverage: number | null = null
 ): Promise<string> => {
   console.log("[AI Service] Starting Groq AI analysis...");
 
-  if (!process.env.GROQ_API_KEY) {
+  if (!process.env.NEXT_PUBLIC_GROQ_API_KEY) {
     console.error("Groq API key not configured");
     return FALLBACK_MESSAGE;
   }
 
-  const prompt = generatePrompt(average, subjects);
+  const prompt = generatePrompt(average, subjects, targetAverage);
   console.log("Generated prompt:", prompt);
 
   try {
@@ -58,7 +73,7 @@ export const getAIAnalysis = async (
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
