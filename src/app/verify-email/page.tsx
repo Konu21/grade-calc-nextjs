@@ -1,20 +1,86 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { toast } from "@/components/ui/use-toast";
+
+const COOLDOWN_TIME = 60; // 60 seconds cooldown
 
 const VerifyEmail = () => {
   const searchParams = useSearchParams();
   const email = searchParams.get("email");
+  const [isResending, setIsResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
-  // Optional: Resend verification email functionality
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (cooldown > 0) {
+        setCooldown((time) => time - 1);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
   const handleResendEmail = async () => {
-    // You would need to implement this function in your auth service
-    console.log("Resend email to:", email);
-    // Example: await supabase.auth.resendVerificationEmail({ email });
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "No email address found. Please try logging in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (cooldown > 0) {
+      toast({
+        title: "Please wait",
+        description: `You can resend the email in ${cooldown} seconds.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResending(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email,
+      });
+
+      if (error) {
+        if (error.message.includes("Too many requests")) {
+          toast({
+            title: "Too many attempts",
+            description: "Please wait a few minutes before trying again.",
+            variant: "destructive",
+          });
+          setCooldown(COOLDOWN_TIME);
+        } else {
+          throw error;
+        }
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description:
+          "Verification email has been resent. Please check your inbox.",
+      });
+      setCooldown(COOLDOWN_TIME);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend verification email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -42,9 +108,14 @@ const VerifyEmail = () => {
             <Button
               variant="outline"
               onClick={handleResendEmail}
+              disabled={isResending || cooldown > 0}
               className="w-full"
             >
-              Resend verification email
+              {isResending
+                ? "Sending..."
+                : cooldown > 0
+                ? `Resend available in ${cooldown}s`
+                : "Resend verification email"}
             </Button>
             <Button asChild variant="link">
               <Link href="/login">Back to login</Link>

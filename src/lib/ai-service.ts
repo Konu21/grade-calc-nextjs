@@ -57,7 +57,7 @@ export const getAIAnalysis = async (
   subjects: GradeAnalysis[],
   targetAverage: number | null = null
 ): Promise<string> => {
-  console.log("[AI Service] Starting Groq AI analysis...");
+  // console.log("[AI Service] Starting Groq AI analysis...");
 
   if (!process.env.NEXT_PUBLIC_API_KEY) {
     console.error("Groq API key not configured");
@@ -65,7 +65,7 @@ export const getAIAnalysis = async (
   }
 
   const prompt = generatePrompt(average, subjects, targetAverage);
-  console.log("Generated prompt:", prompt);
+  // console.log("Generated prompt:", prompt);
 
   try {
     const response = await fetch(
@@ -100,7 +100,7 @@ export const getAIAnalysis = async (
     const advice =
       data.choices[0]?.message?.content?.trim() || FALLBACK_MESSAGE;
 
-    console.log("AI Advice:", advice);
+    // console.log("AI Advice:", advice);
     return advice;
   } catch (error) {
     console.error("Groq request failed:", error);
