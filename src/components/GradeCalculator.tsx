@@ -32,16 +32,6 @@ interface AIAnalysis {
   loading: boolean;
 }
 
-interface ScholarshipGrades {
-  year_IV_to_V: number | null;
-  year_V_to_VI: number | null;
-}
-
-interface BudgetGrades {
-  year_IV_to_V: number | null;
-  year_V_to_VI: number | null;
-}
-
 const TOTAL_CREDITS = 60;
 const DIFFICULTY_COLORS = {
   easy: "bg-green-100 text-green-800",
@@ -58,9 +48,6 @@ export function GradeCalculator() {
     loading: false,
   });
   const [targetAverage, setTargetAverage] = useState<number | "">("");
-  const [scholarshipGrades, setScholarshipGrades] =
-    useState<ScholarshipGrades | null>(null);
-  const [budgetGrades, setBudgetGrades] = useState<BudgetGrades | null>(null);
   const [academicYearId, setAcademicYearId] = useState<number | null>(null);
   const [selectedGradeType, setSelectedGradeType] = useState<
     "custom" | "budget" | "scholarship"
@@ -93,28 +80,6 @@ export function GradeCalculator() {
 
       if (studyCycle) {
         setAcademicYearId(studyCycle.academic_year_id);
-
-        // If year is 4, 5, or 6, fetch scholarship and budget grades
-        if ([4, 5, 6].includes(studyCycle.academic_year_id)) {
-          const { data: scholarshipData } = await supabase
-            .from("last_years_scholarship_grades")
-            .select("year_III_to_IV, year_IV_to_V, year_V_to_VI")
-            .order("year", { ascending: false })
-            .limit(1);
-
-          const { data: budgetData } = await supabase
-            .from("last_years_budget_grades")
-            .select("year_III_to_IV, year_IV_to_V, year_V_to_VI")
-            .order("year", { ascending: false })
-            .limit(1);
-
-          if (scholarshipData?.[0]) {
-            setScholarshipGrades(scholarshipData[0]);
-          }
-          if (budgetData?.[0]) {
-            setBudgetGrades(budgetData[0]);
-          }
-        }
       }
 
       const { data: subjectsData } = await supabase
@@ -341,7 +306,7 @@ export function GradeCalculator() {
   const averageStats = calculateAverage();
 
   const getAIAdvice = async () => {
-    if (!process.env.NEXT_PUBLIC_GROQ_API_KEY) {
+    if (!process.env.NEXT_PUBLIC_API_KEY) {
       toast({
         title: "Configuration Error",
         description:
