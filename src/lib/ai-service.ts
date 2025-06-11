@@ -44,7 +44,7 @@ export const getAIAnalysis = async (
 ): Promise<string> => {
   console.log("[AI Service] Starting Groq AI analysis...");
 
-  if (!process.env.NEXT_PUBLIC_GROQ_API_KEY) {
+  if (!process.env.GROQ_API_KEY) {
     console.error("Groq API key not configured");
     return FALLBACK_MESSAGE;
   }
@@ -58,7 +58,7 @@ export const getAIAnalysis = async (
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_GROQ_API_KEY}`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
