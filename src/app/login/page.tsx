@@ -5,12 +5,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { FaApple } from "react-icons/fa";
-// Update the import path below to the correct location of your UI components.
-// For example, if they are in 'components/ui/button', 'components/ui/input', etc., import them individually:
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/auth/useAuth";
@@ -18,6 +17,34 @@ import { useAuth } from "@/hooks/auth/useAuth";
 // Constants for email suggestions configuration
 const MAX_SUGGESTIONS = 5;
 const SUGGESTION_KEY = "emailSuggestions";
+
+/**
+ * Funcție pentru a determina cheia corectă de stocare locală folosită de Supabase pentru autentificare.
+ * Cheia este de obicei în formatul `sb.<referința-proiectului>.auth-token`.
+ */
+const getSupabaseAuthLocalStorageKey = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_DB_URL;
+  if (!supabaseUrl) {
+    console.error(
+      "NEXT_PUBLIC_DB_URL nu este definit. Nu se poate determina cheia de stocare Supabase."
+    );
+    return null;
+  }
+  try {
+    const url = new URL(supabaseUrl);
+    // Presupunem că referința proiectului este prima parte a numelui de gazdă,
+    // de ex. "abcdefg1234.supabase.co" -> "abcdefg1234"
+    const projectRef = url.hostname.split(".")[0];
+    // Acesta este modelul comun pentru cheia token-ului de autentificare Supabase în localStorage
+    return `sb.${projectRef}.auth-token`;
+  } catch (error) {
+    console.error(
+      "Eșuat parsarea URL-ului Supabase pentru cheia de stocare:",
+      error
+    );
+    return null;
+  }
+};
 
 export default function Login() {
   // Form state management
@@ -30,13 +57,11 @@ export default function Login() {
   const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [rememberMe, setRememberMe] = useState(true); // State for remember me
 
   const router = useRouter();
   const { isAuthenticated, profileComplete, loading: authLoading } = useAuth();
 
-  /**
-   * Load saved email suggestions from localStorage on component mount
-   */
   useEffect(() => {
     const savedEmails = localStorage.getItem(SUGGESTION_KEY);
     if (savedEmails) {
@@ -49,20 +74,12 @@ export default function Login() {
     }
   }, []);
 
-  /**
-   * Redirect to appropriate page if user is already authenticated
-   * - Dashboard if profile is complete
-   * - Complete profile page if not
-   */
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       router.push(profileComplete ? "/dashboard" : "/complete-profile");
     }
   }, [isAuthenticated, profileComplete, authLoading, router]);
 
-  /**
-   * Save email to suggestions list in localStorage
-   */
   const saveEmailToSuggestions = useCallback((email: string) => {
     setEmailSuggestions((prev) => {
       const updated = Array.from(new Set([email, ...prev])).slice(0, 10);
@@ -71,9 +88,6 @@ export default function Login() {
     });
   }, []);
 
-  /**
-   * Handle clicks outside the suggestions dropdown to close it
-   */
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -88,9 +102,6 @@ export default function Login() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  /**
-   * Check if user's profile is complete by verifying study_cycle_id exists
-   */
   const checkProfileCompletion = async (userId: string) => {
     try {
       const { data } = await supabase
@@ -105,9 +116,6 @@ export default function Login() {
     }
   };
 
-  /**
-   * Handle login form submission
-   */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
@@ -116,7 +124,6 @@ export default function Login() {
     setError(null);
 
     try {
-      // Attempt to sign in with provided credentials
       const { error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
@@ -124,17 +131,33 @@ export default function Login() {
 
       if (error) throw error;
 
-      // Get current session after successful login
+      // Dacă "Remember Me" NU este bifat, ștergeți sesiunea din localStorage.
+      // Chiar dacă `persistSession: true` este setat la inițializarea clientului,
+      // Supabase stochează token-ul imediat. Prin urmare, trebuie să-l ștergem manual
+      // pentru a simula comportamentul "non-persistent".
+      if (!rememberMe) {
+        const authStorageKey = getSupabaseAuthLocalStorageKey();
+        if (authStorageKey) {
+          localStorage.removeItem(authStorageKey);
+          console.log(
+            `Sesiunea a fost ștearsă din localStorage: ${authStorageKey}`
+          );
+        } else {
+          console.warn(
+            "Nu s-a putut determina cheia de stocare Supabase. Sesiunea ar putea persista în mod neașteptat."
+          );
+        }
+      }
+
+      // Obțineți sesiunea curentă după autentificarea reușită
       const {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) throw new Error("No session after login");
 
-      // Verify profile completion status
       const isComplete = await checkProfileCompletion(session.user.id);
       saveEmailToSuggestions(formData.email);
 
-      // Redirect based on profile completion status
       router.replace(isComplete ? "/dashboard" : "/complete-profile");
     } catch (error: unknown) {
       setError(getErrorMessage(error));
@@ -143,9 +166,6 @@ export default function Login() {
     }
   };
 
-  /**
-   * Convert error objects to user-friendly messages
-   */
   const getErrorMessage = (error: unknown): string => {
     if (!(error instanceof Error)) return "Login failed";
 
@@ -160,7 +180,6 @@ export default function Login() {
     return error.message || "Login failed";
   };
 
-  // Filter email suggestions based on current input
   const filteredSuggestions = emailSuggestions
     .filter((suggestion) =>
       suggestion.toLowerCase().includes(formData.email.toLowerCase())
@@ -170,7 +189,6 @@ export default function Login() {
   return (
     <div className="flex items-center justify-center px-4 bg-background transition-colors duration-300">
       <div className="w-full max-w-md space-y-6 border rounded-lg p-6 bg-card shadow-md">
-        {/* Header section */}
         <div className="text-center space-y-2">
           <h2 className="font-orbitron text-3xl font-bold text-primary">
             LOGIN
@@ -178,7 +196,6 @@ export default function Login() {
           <p className="text-muted-foreground">Glad you&#39;re back!</p>
         </div>
 
-        {/* Social login buttons */}
         <div className="grid grid-cols-2 gap-3">
           <Button variant="outline" className="gap-2" disabled={loading}>
             <FcGoogle className="h-5 w-5" />
@@ -192,15 +209,12 @@ export default function Login() {
 
         <Separator className="my-4" />
 
-        {/* Error display */}
         {error && (
           <div className="text-red-500 text-sm text-center">{error}</div>
         )}
 
-        {/* Login form */}
         <form className="space-y-4" onSubmit={handleLogin}>
           <div className="space-y-4">
-            {/* Email input with suggestions dropdown */}
             <div className="space-y-2 relative" ref={suggestionsRef}>
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -233,7 +247,6 @@ export default function Login() {
               )}
             </div>
 
-            {/* Password input */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
@@ -248,7 +261,15 @@ export default function Login() {
               />
             </div>
 
-            {/* Forgot password link */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="rememberMe"
+                checked={rememberMe}
+                onCheckedChange={(checked: boolean) => setRememberMe(checked)}
+              />
+              <Label htmlFor="rememberMe">Remember me</Label>
+            </div>
+
             <Button
               type="button"
               variant="link"
@@ -259,7 +280,6 @@ export default function Login() {
             </Button>
           </div>
 
-          {/* Submit button */}
           <Button
             type="submit"
             className={cn(

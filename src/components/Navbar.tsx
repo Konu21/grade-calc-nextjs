@@ -44,7 +44,6 @@ const formatUserName = (fullName: string): string => {
 const NAV_LINKS = [
   { path: "/", name: "HOME" },
   { path: "/simulate", name: "SIMULATE" },
-  { path: "/pricing", name: "PRICING" },
 ];
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
@@ -127,35 +126,81 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     if (isMobile) {
       return (
         <>
-          <Avatar className="fixed top-5 left-5 w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center z-50">
-            {userName}
+          <Avatar
+            className="fixed top-5 left-5 w-12 h-12 rounded-full z-50 
+            bg-black/5 dark:bg-white/10 backdrop-blur-xl border border-black/10 dark:border-white/20 
+            flex items-center justify-center text-foreground dark:text-white font-medium
+            shadow-lg shadow-black/10
+            before:absolute before:inset-0 before:rounded-full 
+            before:bg-gradient-to-br before:from-black/10 before:to-transparent dark:before:from-white/20 dark:before:to-transparent before:opacity-50
+            overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 via-purple-400/20 to-pink-400/20 dark:from-blue-400/20 dark:via-purple-400/20 dark:to-pink-400/20 rounded-full" />
+            <span className="relative z-10">{userName}</span>
           </Avatar>
-          <div className="fixed inset-x-0 bottom-5 z-50 mx-auto w-max rounded-4xl bg-accent/25 border-t px-4 py-2 backdrop-blur-sm md:hidden">
-            <div className="flex gap-2 xs:gap-3 sm:gap-4 justify-center">
-              {SIDEBAR_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex flex-col items-center p-2 text-sm transition-colors rounded-lg",
-                    isActive(item.href)
-                      ? "bg-accent text-primary font-medium rounded-3xl"
-                      : "hover:bg-accent/50"
-                  )}
-                >
-                  {item.icon}
-                  <span className="text-xs mt-1 tracking-wide">
-                    {item.label}
-                  </span>
-                </Link>
-              ))}
-              <button
-                onClick={logout}
-                className="flex flex-col items-center p-2 text-destructive text-sm transition-colors hover:bg-destructive/10 rounded-lg"
-              >
-                <Power className="w-5 h-5" />
-                <span className="text-xs mt-1 tracking-wide">Logout</span>
-              </button>
+
+          <div className="fixed inset-x-0 bottom-5 z-50 mx-auto w-max">
+            <div className="relative">
+              {/* Main liquid glass background */}
+              <div
+                className="absolute inset-0 
+              bg-black/5 dark:bg-white/5 
+              backdrop-blur-2xl rounded-[28px] 
+              border border-black/10 dark:border-white/10 
+              shadow-2xl shadow-black/10 dark:shadow-black/20
+              before:absolute before:inset-0 before:rounded-[28px] 
+              before:bg-gradient-to-br before:from-black/8 before:via-black/3 before:to-transparent dark:before:from-white/30 dark:before:via-white/10 dark:before:to-transparent before:opacity-60
+              after:absolute after:inset-[1px] after:rounded-[27px] 
+              after:bg-gradient-to-br after:from-transparent after:via-black/2 after:to-black/3 dark:after:via-white/5 dark:after:to-white/10"
+              />
+
+              {/* Animated liquid effect */}
+              <div className="absolute inset-0 rounded-[28px] overflow-hidden">
+                <div className="absolute -inset-10 opacity-30 dark:opacity-30">
+                  <div
+                    className="absolute top-0 -left-4 w-24 h-24 bg-gradient-to-r from-blue-400/40 to-purple-400/40 dark:from-blue-400/40 dark:to-purple-400/40 rounded-full blur-xl animate-pulse"
+                    style={{ animationDelay: "0s", animationDuration: "4s" }}
+                  />
+                  <div
+                    className="absolute bottom-0 -right-4 w-20 h-20 bg-gradient-to-r from-purple-400/40 to-pink-400/40 dark:from-purple-400/40 dark:to-pink-400/40 rounded-full blur-xl animate-pulse"
+                    style={{ animationDelay: "2s", animationDuration: "3s" }}
+                  />
+                </div>
+              </div>
+
+              <div className="relative px-4 py-3">
+                <div className="flex gap-2 xs:gap-3 sm:gap-4 justify-center">
+                  {SIDEBAR_ITEMS.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex flex-col items-center p-3 text-sm transition-all duration-300 rounded-2xl relative group",
+                        "hover:scale-110 hover:shadow-lg hover:shadow-white/20",
+                        isActive(item.href)
+                          ? "bg-white/20 text-primary font-medium shadow-inner backdrop-blur-sm border border-white/30"
+                          : "hover:bg-white/15 text-primary/90 hover:text-primary"
+                      )}
+                    >
+                      {isActive(item.href) && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-white/10 rounded-2xl opacity-50" />
+                      )}
+                      <div className="relative z-10">{item.icon}</div>
+                      <span className="text-xs mt-1 tracking-wide relative z-10">
+                        {item.label}
+                      </span>
+                    </Link>
+                  ))}
+                  <button
+                    onClick={logout}
+                    className="flex flex-col items-center p-3 text-red-300 text-sm transition-all duration-300 
+                      hover:bg-red-500/20 hover:text-red-200 rounded-2xl hover:scale-110 hover:shadow-lg hover:shadow-red-500/20"
+                  >
+                    <Power className="w-5 h-5" />
+                    <span className="text-xs mt-1 tracking-wide">Logout</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </>
@@ -169,58 +214,109 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           onMouseLeave={() => setIsHovered(false)}
           variant="floating"
           className={cn(
-            "fixed top-[26%] all-unset left-0 flex flex-col h-[25em] text-sidebar-foreground border-sidebar-border ",
-            "transition-all duration-200 ",
+            "fixed top-[26%] all-unset left-0 flex flex-col h-[25em] text-sidebar-foreground border-sidebar-border",
+            "transition-all duration-200",
             isHovered ? "w-56" : "w-24"
           )}
         >
-          <SidebarHeader className="flex items-center justify-center p-4 bg-accent/25 backdrop-blur-sm rounded-t-4xl">
-            <Avatar className="w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center">
-              {userName}
-            </Avatar>
-          </SidebarHeader>
-          <SidebarContent className="flex-grow p-4 justify-center items-center overflow-hidden bg-accent/25 backdrop-blur-sm">
-            <div className="flex flex-col space-y-2 gap-3 items-center">
-              {SIDEBAR_ITEMS.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center p-4 rounded-md transition-colors",
-                    isActive(item.href)
-                      ? "bg-sidebar-accent/30 rounded-4xl text-primary font-medium"
-                      : "hover:bg-sidebar-accent/30 hover:rounded-4xl hover:text-sidebar-accent-foreground"
-                  )}
-                >
-                  {item.icon}
-                  <span
+          <div className="relative h-full">
+            {/* Main liquid glass background - adaptive for light/dark themes */}
+            <div
+              className="absolute inset-0 
+              bg-black/5 dark:bg-white/5 
+              backdrop-blur-2xl rounded-t-4xl rounded-b-4xl 
+              border border-black/10 dark:border-white/10 
+              shadow-2xl shadow-black/10 dark:shadow-black/20
+              before:absolute before:inset-0 before:rounded-4xl 
+              before:bg-gradient-to-br before:from-black/8 before:via-black/3 before:to-transparent dark:before:from-white/15 dark:before:via-white/5 dark:before:to-transparent before:opacity-40
+              after:absolute after:inset-[1px] after:rounded-4xl 
+              after:bg-gradient-to-br after:from-transparent after:via-black/2 after:to-black/3 dark:after:via-white/3 dark:after:to-white/5"
+            />
+
+            {/* Animated liquid effects */}
+            <div className="absolute inset-0 rounded-4xl overflow-hidden">
+              <div className="absolute -inset-10 opacity-15 dark:opacity-10">
+                <div
+                  className="absolute top-10 -left-4 w-32 h-32 bg-gradient-to-r from-blue-400/30 to-purple-400/30 dark:from-blue-400/20 dark:to-purple-400/20 rounded-full blur-2xl animate-pulse"
+                  style={{ animationDelay: "0s", animationDuration: "6s" }}
+                />
+                <div
+                  className="absolute bottom-10 -left-6 w-28 h-28 bg-gradient-to-r from-purple-400/30 to-pink-400/30 dark:from-purple-400/20 dark:to-pink-400/20 rounded-full blur-2xl animate-pulse"
+                  style={{ animationDelay: "3s", animationDuration: "5s" }}
+                />
+                <div
+                  className="absolute top-1/2 -left-2 w-20 h-20 bg-gradient-to-r from-cyan-400/30 to-blue-400/30 dark:from-cyan-400/20 dark:to-blue-400/20 rounded-full blur-xl animate-pulse"
+                  style={{ animationDelay: "4s", animationDuration: "4s" }}
+                />
+              </div>
+            </div>
+
+            <SidebarHeader className="relative z-10 flex items-center justify-center p-4 rounded-t-4xl">
+              <Avatar
+                className="w-12 h-12 rounded-full bg-sidebar-accent flex items-center justify-center 
+                backdrop-blur-xl border border-black/10 dark:border-white/10 
+                shadow-lg shadow-black/10
+                before:absolute before:inset-0 before:rounded-full 
+                before:bg-gradient-to-br before:from-black/5 before:to-transparent dark:before:from-white/10 dark:before:to-transparent before:opacity-30
+                relative overflow-hidden"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-400/15 via-purple-400/15 to-pink-400/15 dark:from-blue-400/10 dark:via-purple-400/10 dark:to-pink-400/10 rounded-full" />
+                <span className="relative z-10 text-foreground">
+                  {userName}
+                </span>
+              </Avatar>
+            </SidebarHeader>
+
+            <SidebarContent className="relative z-10 flex-grow p-4 justify-center items-center overflow-hidden">
+              <div className="flex flex-col space-y-2 gap-3 items-center">
+                {SIDEBAR_ITEMS.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
                     className={cn(
-                      "text-sm font-medium transition-[width] duration-200 ml-2",
-                      !isHovered && "hidden"
+                      "flex items-center p-4 rounded-md transition-all duration-300 relative",
+                      "hover:scale-105 hover:shadow-lg hover:shadow-primary/10",
+                      isActive(item.href)
+                        ? "bg-sidebar-accent/30 dark:bg-sidebar-accent/20 rounded-4xl text-primary font-medium shadow-inner backdrop-blur-sm border border-black/10 dark:border-white/10"
+                        : "hover:bg-sidebar-accent/30 dark:hover:bg-sidebar-accent/20 hover:rounded-4xl hover:text-sidebar-accent-foreground text-muted-foreground dark:text-white/90"
                     )}
                   >
-                    {item.label}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </SidebarContent>
-          <SidebarFooter className="p-4 border-t border-sidebar-border bg-accent/25 backdrop-blur-sm rounded-b-4xl">
-            <Button
-              onClick={logout}
-              className="flex items-center bg-transparent rounded-md text-destructive hover:bg-sidebar-accent/30 hover:rounded-4xl "
-            >
-              <Power className="w-5 h-5" />
-              <span
-                className={cn(
-                  "text-sm font-medium transition-[width] duration-200 ml-2",
-                  !isHovered && "hidden"
-                )}
+                    {isActive(item.href) && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-black/5 to-black/2 dark:from-white/10 dark:to-white/3 rounded-4xl opacity-30" />
+                    )}
+                    <div className="relative z-10">{item.icon}</div>
+                    <span
+                      className={cn(
+                        "text-sm font-medium transition-[width] duration-200 ml-2 relative z-10",
+                        !isHovered && "hidden"
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </SidebarContent>
+
+            <SidebarFooter className="relative z-10 p-4 border-t border-sidebar-border rounded-b-4xl">
+              <Button
+                onClick={logout}
+                className="flex items-center bg-transparent rounded-md text-destructive 
+                  hover:bg-sidebar-accent/30 dark:hover:bg-sidebar-accent/20 hover:rounded-4xl transition-all duration-300 
+                  hover:scale-105 hover:shadow-lg hover:shadow-red-500/10"
               >
-                Logout
-              </span>
-            </Button>
-          </SidebarFooter>
+                <Power className="w-5 h-5" />
+                <span
+                  className={cn(
+                    "text-sm font-medium transition-[width] duration-200 ml-2",
+                    !isHovered && "hidden"
+                  )}
+                >
+                  Logout
+                </span>
+              </Button>
+            </SidebarFooter>
+          </div>
         </Sidebar>
       );
     }

@@ -72,7 +72,7 @@ const VerifyEmail = () => {
           "Verification email has been resent. Please check your inbox.",
       });
       setCooldown(COOLDOWN_TIME);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to resend verification email. Please try again.",

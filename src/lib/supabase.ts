@@ -14,7 +14,7 @@ export const supabase = createClient(
   process.env.NEXT_PUBLIC_DB_ANON_KEY,
   {
     auth: {
-      persistSession: true,
+      persistSession: true, // This is true by default, allowing sessions to persist
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
