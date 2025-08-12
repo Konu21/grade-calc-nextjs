@@ -27,10 +27,14 @@ const nextConfig: NextConfig = {
 
   // Enable CORS for Supabase
   async rewrites() {
+    const dbUrl = process.env.NEXT_PUBLIC_DB_URL;
+    if (!dbUrl) {
+      return [];
+    }
     return [
       {
         source: "/api/:path*",
-        destination: `${process.env.NEXT_PUBLIC_DB_URL}/:path*`,
+        destination: `${dbUrl}/:path*`,
       },
     ];
   },
