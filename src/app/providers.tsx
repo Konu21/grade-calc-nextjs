@@ -14,6 +14,36 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 }
 
+function clearSupabaseAuthStorage() {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_DB_URL;
+    const keysToRemove: string[] = [];
+
+    if (supabaseUrl) {
+      const url = new URL(supabaseUrl);
+      const projectRef = url.hostname.split(".")[0];
+      keysToRemove.push(`sb-${projectRef}-auth-token`);
+      keysToRemove.push(`sb.${projectRef}.auth-token`);
+    }
+
+    for (const key of keysToRemove) {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (/^sb-.*-auth-token$/i.test(key)) {
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.error("Eroare la curățarea sesiunii Supabase:", error);
+  }
+}
+
 type AuthContextType = {
   isAuthenticated: boolean;
   user: { id: string; email?: string } | null;
@@ -31,6 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
+    const enforceNonPersistent = () => {
+      if (typeof window === "undefined") return;
+      const nonPersistent = sessionStorage.getItem("nonPersistentAuth") === "1";
+      if (nonPersistent) {
+        clearSupabaseAuthStorage();
+      }
+    };
+
     const checkAuth = async () => {
       try {
         const {
@@ -55,6 +93,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAuthenticated: false,
           user: null,
         });
+      } finally {
+        enforceNonPersistent();
       }
     };
 
@@ -72,6 +112,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           : null,
       });
+      // Re-șterge orice token salvat dacă sesiunea trebuie să fie non-persistentă
+      if (typeof window !== "undefined" && sessionStorage.getItem("nonPersistentAuth") === "1") {
+        clearSupabaseAuthStorage();
+      }
     });
 
     return () => subscription.unsubscribe();

@@ -8,6 +8,7 @@ export default function LogoutPage() {
   useEffect(() => {
     const handleLogout = async () => {
       const { error } = await supabase.auth.signOut();
+      sessionStorage.removeItem("nonPersistentAuth");
       if (!error) {
         redirect("/login");
       } else {

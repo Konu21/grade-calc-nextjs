@@ -19,30 +19,42 @@ const MAX_SUGGESTIONS = 5;
 const SUGGESTION_KEY = "emailSuggestions";
 
 /**
- * Funcție pentru a determina cheia corectă de stocare locală folosită de Supabase pentru autentificare.
- * Cheia este de obicei în formatul `sb.<referința-proiectului>.auth-token`.
+ * Curăță toate cheile de stocare locală pe care Supabase le poate folosi pentru sesiunea de autentificare.
+ * În supabase-js v2, cheia are forma `sb-<projectRef>-auth-token`.
+ * Adăugăm și fallback pentru orice chei care se potrivesc modelului general.
  */
-const getSupabaseAuthLocalStorageKey = () => {
-  const supabaseUrl = process.env.NEXT_PUBLIC_DB_URL;
-  if (!supabaseUrl) {
-    console.error(
-      "NEXT_PUBLIC_DB_URL nu este definit. Nu se poate determina cheia de stocare Supabase."
-    );
-    return null;
-  }
+const clearSupabaseAuthStorage = () => {
   try {
-    const url = new URL(supabaseUrl);
-    // Presupunem că referința proiectului este prima parte a numelui de gazdă,
-    // de ex. "abcdefg1234.supabase.co" -> "abcdefg1234"
-    const projectRef = url.hostname.split(".")[0];
-    // Acesta este modelul comun pentru cheia token-ului de autentificare Supabase în localStorage
-    return `sb.${projectRef}.auth-token`;
+    const supabaseUrl = process.env.NEXT_PUBLIC_DB_URL;
+    const keysToRemove: string[] = [];
+
+    if (supabaseUrl) {
+      const url = new URL(supabaseUrl);
+      const projectRef = url.hostname.split(".")[0];
+      // Forma corectă pentru v2
+      keysToRemove.push(`sb-${projectRef}-auth-token`);
+      // Fallback pentru variante atipice/vechi
+      keysToRemove.push(`sb.${projectRef}.auth-token`);
+    }
+
+    // Elimină cheile cunoscute
+    for (const key of keysToRemove) {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+      }
+    }
+
+    // Elimină orice chei care se potrivesc modelului general supabase
+    // (de ex. în caz de medii multiple sau nume neașteptate)
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (/^sb-.*-auth-token$/i.test(key)) {
+        localStorage.removeItem(key);
+      }
+    }
   } catch (error) {
-    console.error(
-      "Eșuat parsarea URL-ului Supabase pentru cheia de stocare:",
-      error
-    );
-    return null;
+    console.error("Eroare la curățarea sesiunii Supabase din localStorage:", error);
   }
 };
 
@@ -57,7 +69,7 @@ export default function Login() {
   const [emailSuggestions, setEmailSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const [rememberMe, setRememberMe] = useState(true); // State for remember me
+  const [rememberMe, setRememberMe] = useState(false); // State for remember me - default off
 
   const router = useRouter();
   const { isAuthenticated, profileComplete, loading: authLoading } = useAuth();
@@ -131,22 +143,13 @@ export default function Login() {
 
       if (error) throw error;
 
-      // Dacă "Remember Me" NU este bifat, ștergeți sesiunea din localStorage.
-      // Chiar dacă `persistSession: true` este setat la inițializarea clientului,
-      // Supabase stochează token-ul imediat. Prin urmare, trebuie să-l ștergem manual
-      // pentru a simula comportamentul "non-persistent".
+      // Dacă "Remember Me" NU este bifat, curățăm orice sesiune persistentă din localStorage.
+      // Sesiunea va rămâne activă doar în memorie pentru tab-ul curent și se va pierde la refresh/închidere tab.
       if (!rememberMe) {
-        const authStorageKey = getSupabaseAuthLocalStorageKey();
-        if (authStorageKey) {
-          localStorage.removeItem(authStorageKey);
-          console.log(
-            `Sesiunea a fost ștearsă din localStorage: ${authStorageKey}`
-          );
-        } else {
-          console.warn(
-            "Nu s-a putut determina cheia de stocare Supabase. Sesiunea ar putea persista în mod neașteptat."
-          );
-        }
+        sessionStorage.setItem("nonPersistentAuth", "1");
+        clearSupabaseAuthStorage();
+      } else {
+        sessionStorage.removeItem("nonPersistentAuth");
       }
 
       // Obțineți sesiunea curentă după autentificarea reușită
